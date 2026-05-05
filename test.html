@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WNC — Генератор сториков</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600&display=swap');
+        
+        body { font-family: 'Inter', system-ui, sans-serif; }
+        .logo-font { font-family: 'Space Grotesk', 'Inter', sans-serif; font-weight: 600; letter-spacing: -0.025em; }
+        .service-tab { transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); }
+        .service-tab.active { background-color: #0D6EFD; color: white; box-shadow: 0 10px 15px -3px rgb(13 110 253 / 0.2); }
+        .service-tab:not(.active):hover { background-color: #f1f5f9; }
+        .content-card { box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.05), 0 4px 6px -4px rgb(0 0 0 / 0.05); }
+        .form-input { transition: all 0.2s ease; }
+        .form-input:focus { border-color: #0D6EFD; box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.1); outline: none; }
+        .form-label { font-size: 13px; font-weight: 600; color: #334155; margin-bottom: 6px; display: block; }
+        .required::after { content: ' *'; color: #ef4444; }
+        .review-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px; }
+        .soon-purple { background: #f3e8ff; color: #7c3aed; font-size: 9px; padding: 1px 6px; border-radius: 9999px; }
+        
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .spinner { animation: spin 1s linear infinite; }
+        
+        @keyframes pulse-dot { 0%,100% { opacity:1; } 50% { opacity:.4; } }
+        .pulse-dot { animation: pulse-dot 1.5s ease-in-out infinite; }
+        
+        .loading-step { transition: all 0.3s ease; }
+        .loading-step.done { color: #10b981; }
+        .loading-step.active { color: #0D6EFD; font-weight: 600; }
+        .loading-step.pending { color: #94a3b8; }
+    </style>
+</head>
+<body class="bg-slate-50">
+
+    <!-- ⚠️ НАСТРОЙКА: замените YOUR_N8N_URL на URL вашего n8n -->
+    <script>
+        const N8N_BASE_URL = 'https://harold1488.app.n8n.cloud';
+        const WEBHOOK_GENERATE = N8N_BASE_URL + '/webhook/story-generator';
+        const WEBHOOK_ACTION   = N8N_BASE_URL + '/webhook/story-action';
+    </script>
+
+    <!-- Header -->
+    <header class="bg-white border-b border-slate-100">
+        <div class="max-w-screen-xl mx-auto px-8 py-4 flex items-center justify-between">
+            <div class="flex items-center gap-x-3">
+                <div class="flex items-center gap-x-2">
+                    <div class="w-9 h-9 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-2xl flex items-center justify-center shadow-inner">
+                        <i class="fa-solid fa-layer-group text-white text-2xl"></i>
+                    </div>
+                    <span class="logo-font text-2xl font-semibold tracking-tighter text-slate-900">WNC</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <div class="max-w-screen-xl mx-auto px-8 pt-8">
+        
+        <!-- Tabs -->
+        <div class="flex items-center gap-x-2 mb-8 overflow-x-auto pb-2">
+            <button onclick="switchTab(0)" class="service-tab active flex-shrink-0 px-5 py-2.5 rounded-3xl text-sm font-semibold flex items-center gap-x-2 shadow-sm bg-blue-600 text-white" id="tab-0">
+                <i class="fa-solid fa-magic"></i><span>Генератор сториков</span>
+            </button>
+            <button onclick="switchTab(1)" class="service-tab flex-shrink-0 px-5 py-2.5 rounded-3xl text-sm font-semibold flex items-center gap-x-2 bg-white border border-slate-200 text-slate-700 hover:bg-slate-50" id="tab-1">
+                <i class="fa-solid fa-comments"></i><span>Генератор комментов</span><span class="soon-purple">скоро</span>
+            </button>
+            <button onclick="switchTab(2)" class="service-tab flex-shrink-0 px-5 py-2.5 rounded-3xl text-sm font-semibold flex items-center gap-x-2 bg-white border border-slate-200 text-slate-700 hover:bg-slate-50" id="tab-2">
+                <i class="fa-solid fa-image"></i><span>Генератор фото ФП</span><span class="soon-purple">скоро</span>
+            </button>
+            <button onclick="switchTab(3)" class="service-tab flex-shrink-0 px-5 py-2.5 rounded-3xl text-sm font-semibold flex items-center gap-x-2 bg-white border border-slate-200 text-slate-700 hover:bg-slate-50" id="tab-3">
+                <i class="fa-solid fa-gif"></i><span>Генератор GIF</span><span class="soon-purple">скоро</span>
+            </button>
+        </div>
+
+        <div id="main-content"></div>
+    </div>
+
+    <footer class="max-w-screen-xl mx-auto px-8 mt-16 pb-8 text-center">
+        <div class="text-xs text-slate-400 flex items-center justify-center gap-x-4">
+            <div>© 2026 WNC</div>
+            <div class="w-px h-2.5 bg-slate-200"></div>
+            <a href="#" class="hover:text-slate-500 transition-colors">Политика конфиденциальности</a>
+            <div class="w-px h-2.5 bg-slate-200"></div>
+            <a href="#" class="hover:text-slate-500 transition-colors">Поддержка</a>
+        </div>
+    </footer>
+
+    <script>
+        let currentTab = 0;
+        let selectedGeo = 'AU';
+        let lastGenerated = null;
+        let photoFile = null;
+
+        /* ─────────────────────────────────────────
+           TAB SWITCHING
+        ───────────────────────────────────────── */
+        function switchTab(tabIndex) {
+            document.querySelectorAll('.service-tab').forEach((tab, i) => {
+                if (i === tabIndex) {
+                    tab.classList.add('active', 'bg-blue-600', 'text-white', 'shadow-sm');
+                    tab.classList.remove('bg-white', 'border', 'border-slate-200', 'text-slate-700');
+                } else {
+                    tab.classList.remove('active', 'bg-blue-600', 'text-white', 'shadow-sm');
+                    tab.classList.add('bg-white', 'border', 'border-slate-200', 'text-slate-700');
+                }
+            });
+            currentTab = tabIndex;
+            renderContent();
+        }
+
+        /* ─────────────────────────────────────────
+           RENDER MAIN CONTENT
+        ───────────────────────────────────────── */
+        function renderContent() {
+            const container = document.getElementById('main-content');
+            
+            if (currentTab === 0) {
+                container.innerHTML = `
+                    <div class="max-w-[1080px] mx-auto">
+                        <div class="mb-8 text-center">
+                            <h1 class="text-4xl font-semibold tracking-tighter text-slate-900">Генератор сториков</h1>
+                            <p class="mt-3 text-lg text-slate-600">Загрузите фото и описание — получите готовую эмоциональную историю для соцсетей на любом языке</p>
+                            <div class="mt-4 flex justify-center">
+                                <div class="inline-flex items-center gap-x-2 px-4 py-1.5 bg-white rounded-2xl border border-slate-200 text-xs">
+                                    <div class="w-2 h-2 bg-emerald-500 rounded-full" style="animation: pulse-dot 1.5s ease-in-out infinite"></div>
+                                    <span class="font-medium text-emerald-700">Всего сториков в базе: ХХ</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                            
+                            <!-- FORM -->
+                            <div class="lg:col-span-7">
+                                <div class="bg-white rounded-3xl border border-slate-200 p-8 content-card">
+                                    <div class="mb-6">
+                                        <label class="form-label required">Фото</label>
+                                        <div id="photo-upload-zone" class="border border-slate-200 rounded-2xl p-4 flex items-center gap-4 hover:border-blue-300 transition-colors cursor-pointer bg-slate-50" onclick="document.getElementById('photo-input').click()">
+                                            <input type="file" id="photo-input" accept=".jpg,.png,.jpeg,.webp,image/*" class="hidden" onchange="handlePhotoUpload(event)">
+                                            <div id="photo-preview-wrap" class="w-12 h-12 bg-white rounded-xl flex items-center justify-center border border-slate-200 flex-shrink-0 overflow-hidden">
+                                                <i id="photo-icon" class="fa-solid fa-image text-xl text-slate-400"></i>
+                                                <img id="photo-thumb" class="w-12 h-12 object-cover rounded-xl hidden">
+                                            </div>
+                                            <div class="flex-1 min-w-0">
+                                                <div id="photo-placeholder" class="text-sm font-medium text-slate-700">Выбор файла (JPG, PNG, WEBP)</div>
+                                                <div id="photo-filename" class="text-xs text-slate-500 truncate hidden"></div>
+                                            </div>
+                                            <div class="px-4 py-1.5 text-xs font-semibold bg-white border border-slate-200 rounded-xl text-slate-600">Обзор</div>
+                                        </div>
+                                    </div>
+
+                                    <div class="mb-6">
+                                        <label class="form-label required">GEO (Страна)</label>
+                                        <select id="geo-select" class="form-input w-full px-4 py-3 border border-slate-200 rounded-2xl text-sm bg-white" onchange="selectedGeo = this.value">
+                                            <option value="AU">AU — Австралия</option>
+                                            <option value="ES">ES — Испания</option>
+                                            <option value="FR">FR — Франция</option>
+                                            <option value="IT">IT — Италия</option>
+                                            <option value="HU">HU — Венгрия</option>
+                                            <option value="GB">GB — Великобритания</option>
+                                            <option value="DE">DE — Германия</option>
+                                            <option value="PT">PT — Португалия</option>
+                                            <option value="PL">PL — Польша</option>
+                                            <option value="RO">RO — Румыния</option>
+                                        </select>
+                                    </div>
+
+                                    <div class="mb-6">
+                                        <label class="form-label required">Название приложения</label>
+                                        <input type="text" id="app-name" class="form-input w-full px-4 py-3 border border-slate-200 rounded-2xl text-sm" placeholder="Например: Lucky Slots, Mega Win Casino">
+                                    </div>
+
+                                    <div class="mb-6">
+                                        <label class="form-label required">Сумма выигрыша</label>
+                                        <div class="relative">
+                                            <input type="number" id="win-amount" class="form-input w-full px-4 py-3 border border-slate-200 rounded-2xl text-sm pr-12" placeholder="86400">
+                                            <div class="absolute right-4 top-3.5 text-slate-400 text-sm font-medium">€</div>
+                                        </div>
+                                    </div>
+
+                                    <div class="mb-6">
+                                        <label class="form-label">Длина сторики</label>
+                                        <select id="story-length" class="form-input w-full px-4 py-3 border border-slate-200 rounded-2xl text-sm bg-white">
+                                            <option value="150">Короткая (150-250 слов)</option>
+                                            <option value="350" selected>Средняя (300-450 слов)</option>
+                                            <option value="600">Длинная (500+ слов)</option>
+                                        </select>
+                                    </div>
+
+                                    <div class="mb-6">
+                                        <label class="form-label">Название слота</label>
+                                        <input type="text" id="slot-name" class="form-input w-full px-4 py-3 border border-slate-200 rounded-2xl text-sm" placeholder="Например: Gates of Olympus, Big Bass Bonanza">
+                                    </div>
+
+                                    <div class="mb-6">
+                                        <label class="form-label">Дополнительный контекст</label>
+                                        <textarea id="extra-context" rows="3" class="form-input w-full px-4 py-3 border border-slate-200 rounded-2xl text-sm resize-y" placeholder="Например: игрок из маленького города, отец двоих детей..."></textarea>
+                                    </div>
+
+                                    <div class="mb-8 flex items-start gap-3">
+                                        <input type="checkbox" id="news-researcher" class="mt-1 w-4 h-4 accent-blue-600">
+                                        <label for="news-researcher" class="text-sm text-slate-600 cursor-pointer">Включить анализ последних новостей ГЕО</label>
+                                    </div>
+
+                                    <button id="submit-btn" onclick="handleFormSubmit(event)" class="w-full py-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold rounded-2xl text-sm tracking-wider flex items-center justify-center gap-x-3 shadow-lg shadow-blue-500/30 active:scale-[0.985] transition-all disabled:opacity-60 disabled:cursor-not-allowed">
+                                        <i class="fa-solid fa-magic"></i>
+                                        <span>СГЕНЕРИРОВАТЬ ИСТОРИЮ</span>
+                                    </button>
+                                    
+                                    <div id="error-msg" class="hidden mt-4 p-3 bg-red-50 border border-red-200 rounded-2xl text-sm text-red-600 flex items-start gap-2">
+                                        <i class="fa-solid fa-circle-exclamation mt-0.5 flex-shrink-0"></i>
+                                        <span id="error-text"></span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- PREVIEW -->
+                            <div class="lg:col-span-5">
+                                <div class="sticky top-8">
+                                    <div id="preview-card" class="bg-white rounded-3xl border border-slate-200 p-6 content-card min-h-[420px]">
+                                        <div class="flex items-center justify-between mb-4 px-1">
+                                            <div class="font-semibold text-slate-800 flex items-center gap-x-2">
+                                                <i class="fa-solid fa-eye text-blue-500"></i> 
+                                                <span>Предпросмотр истории</span>
+                                            </div>
+                                        </div>
+                                        
+                                        <!-- Empty state -->
+                                        <div id="preview-empty" class="flex flex-col items-center justify-center text-center py-12">
+                                            <div class="w-14 h-14 bg-white rounded-2xl flex items-center justify-center mb-4 shadow-inner border border-slate-100">
+                                                <i class="fa-solid fa-file-lines text-3xl text-slate-300"></i>
+                                            </div>
+                                            <div class="text-sm font-medium text-slate-500">Здесь появится история</div>
+                                            <div class="text-xs text-slate-400 mt-1 max-w-[200px]">Заполните форму и нажмите «Сгенерировать историю»</div>
+                                        </div>
+                                        
+                                        <!-- Loading state -->
+                                        <div id="preview-loading" class="hidden py-6 px-2">
+                                            <div class="flex flex-col items-center mb-6">
+                                                <div class="w-12 h-12 border-4 border-blue-100 border-t-blue-600 rounded-full spinner mb-4"></div>
+                                                <div class="text-sm font-semibold text-slate-700">Генерируем историю…</div>
+                                                <div class="text-xs text-slate-400 mt-1">Это займёт 30–90 секунд</div>
+                                            </div>
+                                            <div class="space-y-2.5 text-xs">
+                                                <div id="step-photo" class="loading-step active flex items-center gap-2">
+                                                    <i class="fa-solid fa-camera w-4"></i> Анализ фото через GPT-4o
+                                                </div>
+                                                <div id="step-research" class="loading-step pending flex items-center gap-2">
+                                                    <i class="fa-solid fa-globe w-4"></i> Исследование ГЕО и слота
+                                                </div>
+                                                <div id="step-write" class="loading-step pending flex items-center gap-2">
+                                                    <i class="fa-solid fa-pen-fancy w-4"></i> Копирайтер пишет историю
+                                                </div>
+                                                <div id="step-translate" class="loading-step pending flex items-center gap-2">
+                                                    <i class="fa-solid fa-language w-4"></i> Финальная обработка
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <!-- Review state -->
+                                        <div id="preview-review" class="hidden"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                        </div>
+                    </div>
+                `;
+                
+                setTimeout(() => {
+                    initPhotoUpload();
+                    document.getElementById('geo-select').value = selectedGeo;
+                }, 30);
+                
+            } else {
+                const serviceNames = ["Генератор комментов", "Генератор фото ФП", "Генератор GIF"];
+                const serviceIcons = ["fa-comments", "fa-image", "fa-gif"];
+                
+                document.getElementById('main-content').innerHTML = `
+                    <div class="max-w-[820px] mx-auto">
+                        <div class="bg-white rounded-3xl border border-slate-200 p-10 text-center content-card">
+                            <div class="mx-auto w-20 h-20 bg-gradient-to-br from-purple-400 to-violet-500 rounded-3xl flex items-center justify-center mb-6 shadow-inner">
+                                <i class="fa-solid ${serviceIcons[currentTab - 1]} text-white text-4xl"></i>
+                            </div>
+                            <h2 class="text-3xl font-semibold tracking-tight">${serviceNames[currentTab - 1]}</h2>
+                            <div class="inline-flex items-center gap-x-2 mt-3 mb-6 bg-purple-100 text-purple-600 px-4 py-1 rounded-2xl text-sm font-semibold">
+                                <i class="fa-solid fa-clock"></i>
+                                <span>В разработке • Релиз скоро</span>
+                            </div>
+                            <p class="text-slate-600 max-w-md mx-auto">Этот сервис находится в активной разработке. Следите за обновлениями!</p>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        /* ─────────────────────────────────────────
+           PHOTO UPLOAD
+        ───────────────────────────────────────── */
+        function initPhotoUpload() {
+            const zone = document.getElementById('photo-upload-zone');
+            if (!zone) return;
+            zone.addEventListener('dragover', e => { e.preventDefault(); zone.style.borderColor = '#0D6EFD'; });
+            zone.addEventListener('dragleave', () => zone.style.borderColor = '#e2e8f0');
+            zone.addEventListener('drop', e => {
+                e.preventDefault(); zone.style.borderColor = '#e2e8f0';
+                if (e.dataTransfer.files.length > 0) handlePhotoFile(e.dataTransfer.files[0]);
+            });
+        }
+        
+        function handlePhotoUpload(e) {
+            if (e.target.files.length > 0) handlePhotoFile(e.target.files[0]);
+        }
+        
+        function handlePhotoFile(file) {
+            if (!file.type.startsWith('image/')) { showError('Пожалуйста, выберите изображение (JPG, PNG, WEBP)'); return; }
+            photoFile = file;
+            const reader = new FileReader();
+            reader.onload = function(ev) {
+                const icon = document.getElementById('photo-icon');
+                const thumb = document.getElementById('photo-thumb');
+                const placeholder = document.getElementById('photo-placeholder');
+                const filename = document.getElementById('photo-filename');
+                if (icon) icon.classList.add('hidden');
+                if (thumb) { thumb.src = ev.target.result; thumb.classList.remove('hidden'); }
+                if (placeholder) placeholder.style.display = 'none';
+                if (filename) { filename.style.display = 'block'; filename.innerHTML = `<i class="fa-solid fa-check text-emerald-500 mr-1"></i> ${file.name} (${(file.size/1024).toFixed(0)} KB)`; }
+            };
+            reader.readAsDataURL(file);
+        }
+
+        /* ─────────────────────────────────────────
+           LOADING ANIMATION
+        ───────────────────────────────────────── */
+        let loadingTimer = null;
+        function startLoadingAnimation() {
+            const steps = ['step-photo', 'step-research', 'step-write', 'step-translate'];
+            const delays = [0, 8000, 20000, 40000];
+            steps.forEach((id, i) => {
+                setTimeout(() => {
+                    steps.forEach((sid, j) => {
+                        const el = document.getElementById(sid);
+                        if (!el) return;
+                        if (j < i) el.className = 'loading-step done flex items-center gap-2';
+                        else if (j === i) el.className = 'loading-step active flex items-center gap-2';
+                        else el.className = 'loading-step pending flex items-center gap-2';
+                    });
+                }, delays[i]);
+            });
+        }
+
+        /* ─────────────────────────────────────────
+           FORM SUBMIT → n8n WEBHOOK
+        ───────────────────────────────────────── */
+        async function handleFormSubmit(event) {
+            if (event) event.preventDefault();
+            hideError();
+            
+            // Validate
+            if (!photoFile) { showError('Пожалуйста, загрузите фото'); return; }
+            const appName = document.getElementById('app-name').value.trim();
+            const winAmount = document.getElementById('win-amount').value.trim();
+            if (!appName) { showError('Введите название приложения'); return; }
+            if (!winAmount) { showError('Введите сумму выигрыша'); return; }
+
+            const geo = document.getElementById('geo-select').value;
+            const storyLength = document.getElementById('story-length').value;
+            const slotName = document.getElementById('slot-name').value.trim();
+            const extraContext = document.getElementById('extra-context').value.trim();
+            const newsResearcher = document.getElementById('news-researcher').checked;
+            selectedGeo = geo;
+
+            // Show loading
+            setSubmitState(true);
+            showLoading();
+            startLoadingAnimation();
+
+            // Build FormData
+            const formData = new FormData();
+            formData.append('photo', photoFile);
+            formData.append('geo', geo);
+            formData.append('appName', appName);
+            formData.append('winAmount', winAmount);
+            formData.append('length', storyLength);
+            formData.append('slotName', slotName);
+            formData.append('personalContext', extraContext);
+            formData.append('newsResearcher', newsResearcher);
+
+            try {
+                const res = await fetch(WEBHOOK_GENERATE, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!res.ok) {
+                    const errText = await res.text();
+                    throw new Error(`Ошибка n8n ${res.status}: ${errText.slice(0, 200)}`);
+                }
+
+                const data = await res.json();
+                const original = data.originalStory || data.original || '';
+                const russian  = data.translateStory || data.russian || '';
+
+                if (!original) throw new Error('n8n вернул пустую историю. Проверьте workflow.');
+
+                lastGenerated = { original, russian, geo, appName, winAmount };
+                hideLoading();
+                setSubmitState(false);
+                showReviewUI(original, russian);
+
+            } catch (err) {
+                hideLoading();
+                setSubmitState(false);
+                showError('Ошибка: ' + err.message);
+            }
+        }
+
+        /* ─────────────────────────────────────────
+           REVIEW UI
+        ───────────────────────────────────────── */
+        function showReviewUI(originalText, russianText) {
+            const empty   = document.getElementById('preview-empty');
+            const review  = document.getElementById('preview-review');
+            if (!empty || !review) return;
+            
+            empty.style.display = 'none';
+            review.classList.remove('hidden');
+            review.innerHTML = `
+                <div class="text-center mb-4">
+                    <div class="text-xl font-semibold text-slate-900">Всё ок?</div>
+                    <div class="text-sm text-slate-500 mt-1">Если не ок — поправь</div>
+                </div>
+                
+                <div class="mb-4">
+                    <div class="text-xs font-semibold text-slate-500 mb-1.5 flex justify-between">
+                        <span>Оригинальный текст</span>
+                        <button onclick="copyText('orig-text')" class="text-blue-500 hover:text-blue-700 font-normal"><i class="fa-regular fa-copy mr-1"></i>Копировать</button>
+                    </div>
+                    <div id="orig-text" class="review-box text-sm text-slate-700 leading-relaxed max-h-[160px] overflow-auto whitespace-pre-wrap">${escapeHtml(originalText)}</div>
+                </div>
+                
+                <div class="mb-4">
+                    <div class="text-xs font-semibold text-slate-500 mb-1.5 flex justify-between">
+                        <span>Перевод на русский</span>
+                        <button onclick="copyText('ru-text')" class="text-blue-500 hover:text-blue-700 font-normal"><i class="fa-regular fa-copy mr-1"></i>Копировать</button>
+                    </div>
+                    <div id="ru-text" class="review-box text-sm text-slate-700 leading-relaxed max-h-[160px] overflow-auto whitespace-pre-wrap">${escapeHtml(russianText)}</div>
+                </div>
+                
+                <div class="mb-4">
+                    <div class="text-xs font-semibold text-slate-500 mb-1.5">Правки (необязательно)</div>
+                    <textarea id="revision-prompt" rows="2" class="form-input w-full px-4 py-3 border border-slate-200 rounded-2xl text-sm resize-y" placeholder="Что изменить? Например: добавь эмоций в начале..."></textarea>
+                </div>
+                
+                <div class="flex gap-2">
+                    <button onclick="sendAction('approve')" class="flex-1 py-3 bg-gradient-to-r from-emerald-500 to-green-500 hover:from-emerald-600 hover:to-green-600 text-white font-semibold rounded-2xl text-sm flex items-center justify-center gap-x-2 shadow-lg shadow-emerald-500/25 active:scale-[0.985] transition-all">
+                        <i class="fa-solid fa-check"></i> Одобрить
+                    </button>
+                    <button onclick="sendAction('regenerate')" class="flex-1 py-3 bg-white border-2 border-slate-200 hover:border-blue-400 text-slate-700 hover:text-blue-700 font-semibold rounded-2xl text-sm flex items-center justify-center gap-x-2 active:scale-[0.985] transition-all">
+                        <i class="fa-solid fa-rotate"></i> Переписать
+                    </button>
+                </div>
+            `;
+        }
+
+        /* ─────────────────────────────────────────
+           APPROVE / REWRITE → n8n WEBHOOK
+        ───────────────────────────────────────── */
+        async function sendAction(action) {
+            if (!lastGenerated) return;
+            
+            const revisionPrompt = document.getElementById('revision-prompt')?.value.trim() || '';
+            
+            if (action === 'regenerate' && !revisionPrompt) {
+                showInlineError('Введите правки перед тем как отправить на доработку');
+                return;
+            }
+
+            // Show mini-loader in review
+            const review = document.getElementById('preview-review');
+            const originalHTML = review.innerHTML;
+            
+            if (action === 'approve') {
+                review.innerHTML = `
+                    <div class="text-center py-6">
+                        <div class="w-10 h-10 border-4 border-blue-100 border-t-blue-600 rounded-full spinner mx-auto mb-3"></div>
+                        <div class="text-sm text-slate-500">Сохраняем в датасет…</div>
+                    </div>`;
+            } else {
+                review.innerHTML = `
+                    <div class="text-center py-6">
+                        <div class="w-10 h-10 border-4 border-blue-100 border-t-blue-600 rounded-full spinner mx-auto mb-3"></div>
+                        <div class="text-sm text-slate-500">Переписываем историю…</div>
+                        <div class="text-xs text-slate-400 mt-1">30–60 секунд</div>
+                    </div>`;
+            }
+
+            try {
+                const payload = {
+                    action: action,
+                    'Оригинальный текст': lastGenerated.original,
+                    'Перевод на русский': lastGenerated.russian,
+                    revisionPrompt: revisionPrompt,
+                    geo: lastGenerated.geo
+                };
+
+                const res = await fetch(WEBHOOK_ACTION, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!res.ok) throw new Error(`Ошибка ${res.status}`);
+                const data = await res.json();
+
+                if (action === 'approve') {
+                    showApproveSuccess(data.tag || '');
+                } else {
+                    // Rewrite returned new story
+                    const newOriginal = data.originalStory || data.original || '';
+                    const newRussian  = data.translateStory || data.russian || '';
+                    lastGenerated.original = newOriginal;
+                    lastGenerated.russian  = newRussian;
+                    showReviewUI(newOriginal, newRussian);
+                }
+
+            } catch (err) {
+                // On error - restore original review UI and show error
+                review.innerHTML = originalHTML;
+                showInlineError('Ошибка: ' + err.message);
+            }
+        }
+
+        function showApproveSuccess(tag) {
+            const card = document.getElementById('preview-card');
+            card.innerHTML = `
+                <div class="text-center py-10">
+                    <div class="mx-auto w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mb-4">
+                        <i class="fa-solid fa-check text-emerald-600 text-3xl"></i>
+                    </div>
+                    <div class="font-semibold text-xl text-emerald-600">Готово!</div>
+                    <p class="text-slate-600 mt-2 text-sm">История сохранена в датасет.${tag ? '<br><code class="text-xs bg-slate-100 px-2 py-0.5 rounded-lg mt-1 inline-block">' + escapeHtml(tag) + '</code>' : ''}</p>
+                    <div class="mt-5 flex flex-col gap-2">
+                        <button onclick="copyFinalStory()" class="mx-auto px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold rounded-2xl transition-all flex items-center gap-2">
+                            <i class="fa-regular fa-copy"></i> Скопировать историю
+                        </button>
+                        <button onclick="renderContent()" class="mt-1 text-xs text-slate-500 hover:text-slate-700 mx-auto">Создать новую историю</button>
+                    </div>
+                </div>
+            `;
+        }
+
+        /* ─────────────────────────────────────────
+           HELPERS
+        ───────────────────────────────────────── */
+        function setSubmitState(loading) {
+            const btn = document.getElementById('submit-btn');
+            if (!btn) return;
+            btn.disabled = loading;
+            btn.innerHTML = loading
+                ? `<div class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full spinner"></div><span>Генерируем…</span>`
+                : `<i class="fa-solid fa-magic"></i><span>СГЕНЕРИРОВАТЬ ИСТОРИЮ</span>`;
+        }
+
+        function showLoading() {
+            const empty   = document.getElementById('preview-empty');
+            const loading = document.getElementById('preview-loading');
+            const review  = document.getElementById('preview-review');
+            if (empty)   empty.style.display = 'none';
+            if (loading) loading.classList.remove('hidden');
+            if (review)  review.classList.add('hidden');
+        }
+
+        function hideLoading() {
+            const loading = document.getElementById('preview-loading');
+            if (loading) loading.classList.add('hidden');
+        }
+
+        function showError(msg) {
+            const box  = document.getElementById('error-msg');
+            const text = document.getElementById('error-text');
+            if (box && text) { text.textContent = msg; box.classList.remove('hidden'); }
+        }
+
+        function hideError() {
+            const box = document.getElementById('error-msg');
+            if (box) box.classList.add('hidden');
+        }
+
+        function showInlineError(msg) {
+            const review = document.getElementById('preview-review');
+            if (!review) return;
+            let errDiv = review.querySelector('.inline-err');
+            if (!errDiv) {
+                errDiv = document.createElement('div');
+                errDiv.className = 'inline-err mt-3 p-3 bg-red-50 border border-red-200 rounded-2xl text-xs text-red-600';
+                review.appendChild(errDiv);
+            }
+            errDiv.textContent = msg;
+            setTimeout(() => { if (errDiv) errDiv.remove(); }, 4000);
+        }
+
+        function escapeHtml(str) {
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;');
+        }
+
+        function copyText(elementId) {
+            const el = document.getElementById(elementId);
+            if (!el) return;
+            navigator.clipboard.writeText(el.innerText).then(() => {
+                const btn = el.previousElementSibling?.querySelector('button');
+                if (btn) {
+                    const orig = btn.innerHTML;
+                    btn.innerHTML = '<i class="fa-solid fa-check mr-1 text-emerald-500"></i>Скопировано!';
+                    setTimeout(() => { btn.innerHTML = orig; }, 1500);
+                }
+            });
+        }
+
+        function copyFinalStory() {
+            if (!lastGenerated) return;
+            const full = lastGenerated.original + '\n\n--- Перевод на русский ---\n\n' + lastGenerated.russian;
+            navigator.clipboard.writeText(full).catch(() => {});
+        }
+
+        /* ─────────────────────────────────────────
+           INIT
+        ───────────────────────────────────────── */
+        window.onload = function() {
+            document.getElementById('tab-0').classList.add('active', 'bg-blue-600', 'text-white', 'shadow-sm');
+            renderContent();
+        };
+    </script>
+</body>
+</html>
